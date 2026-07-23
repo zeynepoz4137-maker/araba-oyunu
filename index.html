@@ -266,6 +266,34 @@
       color: #cbd2d8;
     }
 
+    .puan-sonucu {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      margin: 0 0 12px;
+      padding: 11px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.06);
+      color: #e8ecef;
+      font-size: 15px;
+    }
+
+    .puan-sonucu strong {
+      color: white;
+      font-size: 18px;
+    }
+
+    .oyun-bitti-kutu .tebrik-mesaji {
+      margin: 0 0 15px;
+      padding: 10px 12px;
+      border-radius: 9px;
+      color: #fff3b0;
+      background: rgba(202, 157, 36, 0.17);
+      font-weight: bold;
+    }
+
     .butonlar {
       display: flex;
       flex-wrap: wrap;
@@ -332,9 +360,9 @@
     <h1>Trafik Modlu Araba Oyunu</h1>
 
     <div class="bilgi">
-      Sol ve sağ ok: Şerit değiştir •
-      Yukarı ok: Hızlan •
-      Aşağı ok: Yavaşla
+      ← →: Yumuşak yön ver •
+      ↑: Hızlan •
+      ↓: Yavaşla
     </div>
 
     <div class="canvas-kapsayici">
@@ -412,8 +440,17 @@
 
       <div id="oyunBittiEkrani" class="katman gizli">
         <div class="oyun-bitti-kutu">
-          <h2>Oyun Bitti</h2>
-          <p>Bir araca çarptın.</p>
+          <h2 id="oyunBittiBaslik">Oyun Bitti</h2>
+          <p id="oyunBittiAciklama">Bir araca çarptın.</p>
+
+          <div class="puan-sonucu">
+            <span>Puanın: <strong id="sonPuan">0</strong></span>
+            <span>En yüksek: <strong id="sonRekor">0</strong></span>
+          </div>
+
+          <p id="tebrikMesaji" class="tebrik-mesaji gizli">
+            Yeni en yüksek puana ulaştın!
+          </p>
 
           <div class="butonlar">
             <button id="tekrarOyna" class="vurgulu" type="button">
@@ -446,6 +483,11 @@
     const geriSayimSayi = document.getElementById("geriSayimSayi");
     const geriSayimModu = document.getElementById("geriSayimModu");
     const oyunBittiEkrani = document.getElementById("oyunBittiEkrani");
+    const oyunBittiBaslik = document.getElementById("oyunBittiBaslik");
+    const oyunBittiAciklama = document.getElementById("oyunBittiAciklama");
+    const sonPuan = document.getElementById("sonPuan");
+    const sonRekor = document.getElementById("sonRekor");
+    const tebrikMesaji = document.getElementById("tebrikMesaji");
 
     const yenidenBaslatButonu = document.getElementById("yenidenBaslat");
     const menuyeDonButonu = document.getElementById("menuyeDon");
@@ -464,20 +506,65 @@
       cift: "İki Yönlü Trafik"
     };
 
+    function rekorBilgisiniOku() {
+      try {
+        const kayit = localStorage.getItem("trafikOyunuEnYuksekPuan");
+
+        return {
+          puan: kayit === null ? 0 : Number(kayit) || 0,
+          dahaOnceOynandi: kayit !== null
+        };
+      } catch (hata) {
+        return {
+          puan: 0,
+          dahaOnceOynandi: false
+        };
+      }
+    }
+
+    function rekoruKaydet(deger) {
+      try {
+        localStorage.setItem(
+          "trafikOyunuEnYuksekPuan",
+          String(deger)
+        );
+      } catch (hata) {
+        // Tarayıcı depolamaya izin vermezse rekor yalnızca sayfa açıkken korunur.
+      }
+    }
+
+    const kayitliRekor = rekorBilgisiniOku();
+
     let seciliMod = null;
     let oyunDurumu = "menu";
-    let oyunHizi = 4.3;
+    let oyunHizi = 0;
+    let puan = 0;
+    let enYuksekPuan = kayitliRekor.puan;
+    let oyunBaslangicRekoru = enYuksekPuan;
+    let dahaOnceOynandi = kayitliRekor.dahaOnceOynandi;
+    let oyunBaslangicindaEskiSkorVarMi = dahaOnceOynandi;
     let yolCizgiKonumu = 0;
     let dusmanOlusturmaSayaci = 0;
     let dusmanlar = [];
     let animasyonKimligi = null;
     let geriSayimZamanlayicisi = null;
 
+    const tuslar = {
+      sol: false,
+      sag: false,
+      yukari: false,
+      asagi: false
+    };
+
     const oyuncu = {
-      serit: 2,
+      x: 0,
+      y: canvas.height - 115,
       genislik: 48,
       yukseklik: 85,
-      y: canvas.height - 115
+      hizX: 0,
+      maksimumYatayHiz: 6.0,
+      ivme: 0.72,
+      surtunme: 0.82
     };
 
     function seritX(serit, aracGenisligi) {
@@ -709,11 +796,62 @@
       }
     }
 
-    function oyuncuyuCiz() {
-      const x = seritX(oyuncu.serit, oyuncu.genislik);
+    function oyuncuyuGuncelle() {
+      // Oyuncu arabası ekranda sabit yükseklikte kalır.
+      oyuncu.y = canvas.height - 115;
 
+      // Yukarı ve aşağı ok yalnızca yol/trafik hızını değiştirir.
+      if (tuslar.yukari) {
+        oyunHizi = Math.min(8, oyunHizi + 0.035);
+      }
+
+      if (tuslar.asagi) {
+        oyunHizi = Math.max(2, oyunHizi - 0.045);
+      }
+
+      // Sol ve sağ tuşlara basılı tutuldukça araba yumuşak biçimde kayar.
+      if (tuslar.sol) {
+        oyuncu.hizX -= oyuncu.ivme;
+      }
+
+      if (tuslar.sag) {
+        oyuncu.hizX += oyuncu.ivme;
+      }
+
+      // Tuş bırakılınca araç bir anda durmaz, kısa bir kaymayla toparlanır.
+      if (!tuslar.sol && !tuslar.sag) {
+        oyuncu.hizX *= oyuncu.surtunme;
+      }
+
+      oyuncu.hizX = Math.max(
+        -oyuncu.maksimumYatayHiz,
+        Math.min(oyuncu.maksimumYatayHiz, oyuncu.hizX)
+      );
+
+      oyuncu.x += oyuncu.hizX;
+
+      const yolIciSolSinir = yolSol + 9;
+      const yolIciSagSinir =
+        yolSol + yolGenislik - oyuncu.genislik - 9;
+
+      if (oyuncu.x < yolIciSolSinir) {
+        oyuncu.x = yolIciSolSinir;
+        oyuncu.hizX = 0;
+      }
+
+      if (oyuncu.x > yolIciSagSinir) {
+        oyuncu.x = yolIciSagSinir;
+        oyuncu.hizX = 0;
+      }
+
+      if (Math.abs(oyuncu.hizX) < 0.05) {
+        oyuncu.hizX = 0;
+      }
+    }
+
+    function oyuncuyuCiz() {
       arabaCiz(
-        x,
+        oyuncu.x,
         oyuncu.y,
         oyuncu.genislik,
         oyuncu.yukseklik,
@@ -740,7 +878,7 @@
         return oyunHizi * 1.02;
       }
 
-      return Math.max(1.45, oyunHizi * 0.48);
+      return Math.max(1.25, oyunHizi * 0.48);
     }
 
     function dusmanOlustur() {
@@ -857,15 +995,13 @@
 
         if (dusman.y > canvas.height + 110) {
           dusmanlar.splice(i, 1);
+          puan++;
         }
       }
     }
 
     function carpismaVarMi(dusman) {
-      const oyuncuX = seritX(
-        oyuncu.serit,
-        oyuncu.genislik
-      );
+      const oyuncuX = oyuncu.x;
 
       const dusmanX = seritX(
         dusman.serit,
@@ -894,6 +1030,21 @@
       ctx.fillStyle = "#cbd2d8";
       ctx.font = "13px Arial";
       ctx.fillText(modAdlari[seciliMod] || "", 24, 54);
+
+      ctx.fillStyle = "rgba(14, 17, 20, 0.74)";
+      yuvarlatilmisDikdortgen(canvas.width - 137, 12, 125, 55, 9);
+
+      ctx.fillStyle = "#f2f4f5";
+      ctx.font = "bold 16px Arial";
+      ctx.fillText("Puan: " + puan, canvas.width - 124, 34);
+
+      ctx.fillStyle = "#cbd2d8";
+      ctx.font = "13px Arial";
+      ctx.fillText(
+        "Rekor: " + Math.max(enYuksekPuan, puan),
+        canvas.width - 124,
+        54
+      );
     }
 
     function oyunDongusu() {
@@ -904,6 +1055,7 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       yoluCiz();
+      oyuncuyuGuncelle();
       oyuncuyuCiz();
       dusmanlariGuncelle();
       bilgileriCiz();
@@ -920,10 +1072,22 @@
       }
 
       oyunHizi = 4.3;
+      puan = 0;
+      oyunBaslangicRekoru = enYuksekPuan;
+      oyunBaslangicindaEskiSkorVarMi = dahaOnceOynandi;
       yolCizgiKonumu = 0;
       dusmanOlusturmaSayaci = 0;
       dusmanlar = [];
-      oyuncu.serit = seciliMod === "cift" ? 2 : 1;
+
+      const baslangicSeridi = seciliMod === "cift" ? 2 : 1;
+      oyuncu.x = seritX(baslangicSeridi, oyuncu.genislik);
+      oyuncu.y = canvas.height - 115;
+      oyuncu.hizX = 0;
+
+      tuslar.sol = false;
+      tuslar.sag = false;
+      tuslar.yukari = false;
+      tuslar.asagi = false;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       yoluCiz();
@@ -988,6 +1152,32 @@
         animasyonKimligi = null;
       }
 
+      const yeniRekorYapildi =
+        oyunBaslangicindaEskiSkorVarMi &&
+        puan > oyunBaslangicRekoru;
+
+      if (puan > enYuksekPuan) {
+        enYuksekPuan = puan;
+      }
+
+      // İlk oyun da dâhil olmak üzere en yüksek puanı tarayıcıya kaydet.
+      rekoruKaydet(enYuksekPuan);
+      dahaOnceOynandi = true;
+
+      sonPuan.textContent = puan;
+      sonRekor.textContent = enYuksekPuan;
+
+      if (yeniRekorYapildi) {
+        oyunBittiBaslik.textContent = "Tebrikler!";
+        oyunBittiAciklama.textContent =
+          "Önceki en yüksek puanını geçtin.";
+        tebrikMesaji.classList.remove("gizli");
+      } else {
+        oyunBittiBaslik.textContent = "Oyun Bitti";
+        oyunBittiAciklama.textContent = "Bir araca çarptın.";
+        tebrikMesaji.classList.add("gizli");
+      }
+
       oyunBittiEkrani.classList.remove("gizli");
     }
 
@@ -1005,6 +1195,9 @@
       oyunBittiEkrani.classList.add("gizli");
       menuEkrani.classList.remove("gizli");
 
+      oyunHizi = 0;
+      oyuncu.hizX = 0;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       seciliMod = null;
       yoluCiz();
@@ -1018,26 +1211,6 @@
     });
 
     document.addEventListener("keydown", function(event) {
-      if (oyunDurumu !== "oynuyor") {
-        return;
-      }
-
-      if (event.key === "ArrowLeft") {
-        oyuncu.serit = Math.max(0, oyuncu.serit - 1);
-      }
-
-      if (event.key === "ArrowRight") {
-        oyuncu.serit = Math.min(seritSayisi - 1, oyuncu.serit + 1);
-      }
-
-      if (event.key === "ArrowUp") {
-        oyunHizi = Math.min(10, oyunHizi + 0.7);
-      }
-
-      if (event.key === "ArrowDown") {
-        oyunHizi = Math.max(2, oyunHizi - 0.7);
-      }
-
       if (
         event.key === "ArrowLeft" ||
         event.key === "ArrowRight" ||
@@ -1046,6 +1219,52 @@
       ) {
         event.preventDefault();
       }
+
+      if (oyunDurumu !== "oynuyor") {
+        return;
+      }
+
+      if (event.key === "ArrowLeft") {
+        tuslar.sol = true;
+      }
+
+      if (event.key === "ArrowRight") {
+        tuslar.sag = true;
+      }
+
+      if (event.key === "ArrowUp") {
+        tuslar.yukari = true;
+      }
+
+      if (event.key === "ArrowDown") {
+        tuslar.asagi = true;
+      }
+
+    });
+
+    document.addEventListener("keyup", function(event) {
+      if (event.key === "ArrowLeft") {
+        tuslar.sol = false;
+      }
+
+      if (event.key === "ArrowRight") {
+        tuslar.sag = false;
+      }
+
+      if (event.key === "ArrowUp") {
+        tuslar.yukari = false;
+      }
+
+      if (event.key === "ArrowDown") {
+        tuslar.asagi = false;
+      }
+    });
+
+    window.addEventListener("blur", function() {
+      tuslar.sol = false;
+      tuslar.sag = false;
+      tuslar.yukari = false;
+      tuslar.asagi = false;
     });
 
     yenidenBaslatButonu.addEventListener("click", function() {
@@ -1059,6 +1278,8 @@
     menuyeDonButonu.addEventListener("click", menuGoster);
     tekrarOynaButonu.addEventListener("click", geriSayimiBaslat);
     modSecButonu.addEventListener("click", menuGoster);
+
+    oyuncu.x = seritX(1, oyuncu.genislik);
 
     ctx.fillStyle = "#31553a";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
