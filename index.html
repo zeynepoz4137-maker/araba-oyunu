@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trafik Modlu Araba Oyunu</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: linear-gradient(145deg, #17191d, #282d34);
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    .oyun-alani {
+      width: min(96vw, 560px);
+      padding: 20px;
+      text-align: center;
+      background: rgba(20, 23, 27, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.38);
+    }
+
+    h1 {
+      margin: 0 0 7px;
+      font-size: 27px;
+    }
+
+    .bilgi {
+      margin-bottom: 14px;
+      color: #cfd5dc;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .canvas-kapsayici {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 3px solid #737b85;
+      border-radius: 12px;
+      background: #454b50;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38);
+    }
+
+    .katman {
+      position: absolute;
+      inset: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9px;
+      background: rgba(10, 12, 15, 0.88);
+      overflow: hidden;
+    }
+
+    .gizli {
+      display: none;
+    }
+
+    .menu-icerik {
+      width: 100%;
+      max-height: 100%;
+      padding: 22px 16px;
+      overflow-y: auto;
+    }
+
+    .menu-icerik h2 {
+      margin: 0 0 6px;
+      font-size: 24px;
+    }
+
+    .menu-aciklama {
+      margin: 0 0 16px;
+      color: #c7ced6;
+      font-size: 14px;
+    }
+
+    .mod-listesi {
+      display: grid;
+      gap: 12px;
+    }
+
+    .mod-karti {
+      display: grid;
+      grid-template-columns: 105px 1fr;
+      gap: 13px;
+      align-items: center;
+      width: 100%;
+      padding: 11px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 12px;
+      color: white;
+      background: #252b32;
+      text-align: left;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .mod-karti:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255, 255, 255, 0.36);
+      background: #303841;
+    }
+
+    .mod-baslik {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .mod-metin {
+      display: block;
+      color: #c9d0d7;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .mini-yol {
+      position: relative;
+      height: 84px;
+      border: 2px solid #7e858b;
+      border-radius: 8px;
+      background:
+        linear-gradient(
+          to right,
+          transparent 24%,
+          rgba(230, 230, 230, 0.8) 24%,
+          rgba(230, 230, 230, 0.8) 26%,
+          transparent 26%,
+          transparent 49%,
+          rgba(230, 230, 230, 0.8) 49%,
+          rgba(230, 230, 230, 0.8) 51%,
+          transparent 51%,
+          transparent 74%,
+          rgba(230, 230, 230, 0.8) 74%,
+          rgba(230, 230, 230, 0.8) 76%,
+          transparent 76%
+        ),
+        #42484d;
+      overflow: hidden;
+    }
+
+    .mini-yol.cift-yon::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: calc(50% - 3px);
+      width: 6px;
+      background:
+        linear-gradient(
+          to right,
+          #d6aa39 0 2px,
+          transparent 2px 4px,
+          #d6aa39 4px 6px
+        );
+    }
+
+    .ok {
+      position: absolute;
+      width: 25%;
+      color: white;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      text-shadow: 0 1px 3px black;
+    }
+
+    .ok.s1 { left: 0; }
+    .ok.s2 { left: 25%; }
+    .ok.s3 { left: 50%; }
+    .ok.s4 { left: 75%; }
+    .ok.ust { top: 7px; }
+    .ok.alt { bottom: 7px; }
+
+    .mini-araba {
+      position: absolute;
+      width: 14px;
+      height: 25px;
+      margin-left: -7px;
+      border-radius: 4px;
+      background: #d9474f;
+      box-shadow: 0 2px 3px rgba(0, 0, 0, 0.45);
+    }
+
+    .mini-araba::before,
+    .mini-araba::after {
+      content: "";
+      position: absolute;
+      left: 3px;
+      width: 8px;
+      height: 5px;
+      border-radius: 2px;
+      background: #b9e7fa;
+    }
+
+    .mini-araba::before { top: 4px; }
+    .mini-araba::after { bottom: 4px; }
+
+    .geri-sayim {
+      flex-direction: column;
+      background: rgba(8, 10, 13, 0.68);
+      backdrop-filter: blur(2px);
+    }
+
+    .geri-sayim-sayi {
+      font-size: 100px;
+      font-weight: bold;
+      line-height: 1;
+      text-shadow: 0 7px 22px rgba(0, 0, 0, 0.6);
+      animation: nabiz 0.7s ease;
+    }
+
+    .geri-sayim-mod {
+      margin-top: 12px;
+      color: #e2e5e8;
+      font-size: 16px;
+    }
+
+    @keyframes nabiz {
+      0% {
+        opacity: 0;
+        transform: scale(1.45);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .oyun-bitti-kutu {
+      width: min(85%, 310px);
+      padding: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 14px;
+      background: #20262c;
+    }
+
+    .oyun-bitti-kutu h2 {
+      margin: 0 0 7px;
+      font-size: 30px;
+    }
+
+    .oyun-bitti-kutu p {
+      margin: 0 0 16px;
+      color: #cbd2d8;
+    }
+
+    .butonlar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 9px;
+      margin-top: 14px;
+    }
+
+    button.alt-buton,
+    .oyun-bitti-kutu button {
+      padding: 10px 17px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 9px;
+      color: white;
+      background: #3d4651;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: bold;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    button.alt-buton:hover,
+    .oyun-bitti-kutu button:hover {
+      background: #4c5866;
+      transform: translateY(-1px);
+    }
+
+    button.vurgulu {
+      background: #a93239;
+    }
+
+    button.vurgulu:hover {
+      background: #bf3c44;
+    }
+
+    @media (max-width: 470px) {
+      .oyun-alani {
+        padding: 12px;
+      }
+
+      h1 {
+        font-size: 23px;
+      }
+
+      .mod-karti {
+        grid-template-columns: 88px 1fr;
+        gap: 9px;
+        padding: 9px;
+      }
+
+      .mini-yol {
+        height: 74px;
+      }
+
+      .mod-metin {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="oyun-alani">
+    <h1>Trafik Modlu Araba Oyunu</h1>
+
+    <div class="bilgi">
+      Sol ve sağ ok: Şerit değiştir •
+      Yukarı ok: Hızlan •
+      Aşağı ok: Yavaşla
+    </div>
+
+    <div class="canvas-kapsayici">
+      <canvas id="oyun" width="420" height="650"></canvas>
+
+      <div id="menuEkrani" class="katman">
+        <div class="menu-icerik">
+          <h2>Trafik Türünü Seç</h2>
+          <p class="menu-aciklama">
+            Yol düzenini seçtikten sonra oyun 3-2-1 geri sayımıyla başlayacak.
+          </p>
+
+          <div class="mod-listesi">
+            <button class="mod-karti" data-mod="karsi" type="button">
+              <span class="mini-yol">
+                <span class="ok s1 alt">↓</span>
+                <span class="ok s2 ust">↓</span>
+                <span class="ok s3 alt">↓</span>
+                <span class="ok s4 ust">↓</span>
+                <span class="mini-araba" style="left: 12.5%; top: 22px;"></span>
+                <span class="mini-araba" style="left: 62.5%; top: 48px; background:#3f78a8;"></span>
+              </span>
+
+              <span>
+                <span class="mod-baslik">Tam Karşı Trafik</span>
+                <span class="mod-metin">
+                  Dört şeritteki bütün araçlar karşı yönden gelir.
+                </span>
+              </span>
+            </button>
+
+            <button class="mod-karti" data-mod="ayni" type="button">
+              <span class="mini-yol">
+                <span class="ok s1 ust">↑</span>
+                <span class="ok s2 alt">↑</span>
+                <span class="ok s3 ust">↑</span>
+                <span class="ok s4 alt">↑</span>
+                <span class="mini-araba" style="left: 37.5%; top: 16px; background:#d1a32e;"></span>
+                <span class="mini-araba" style="left: 87.5%; top: 47px; background:#4d8c69;"></span>
+              </span>
+
+              <span>
+                <span class="mod-baslik">Aynı Yön Trafik</span>
+                <span class="mod-metin">
+                  Araçlar seninle aynı yönde gider; sollayarak ilerlersin.
+                </span>
+              </span>
+            </button>
+
+            <button class="mod-karti" data-mod="cift" type="button">
+              <span class="mini-yol cift-yon">
+                <span class="ok s1 alt">↓</span>
+                <span class="ok s2 ust">↓</span>
+                <span class="ok s3 ust">↑</span>
+                <span class="ok s4 alt">↑</span>
+                <span class="mini-araba" style="left: 12.5%; top: 15px; background:#754b91;"></span>
+                <span class="mini-araba" style="left: 87.5%; top: 46px; background:#3f78a8;"></span>
+              </span>
+
+              <span>
+                <span class="mod-baslik">İki Yönlü Trafik</span>
+                <span class="mod-metin">
+                  Sol iki şerit karşı yön, sağ iki şerit aynı yöndür.
+                </span>
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="geriSayimEkrani" class="katman geri-sayim gizli">
+        <div id="geriSayimSayi" class="geri-sayim-sayi">3</div>
+        <div id="geriSayimModu" class="geri-sayim-mod"></div>
+      </div>
+
+      <div id="oyunBittiEkrani" class="katman gizli">
+        <div class="oyun-bitti-kutu">
+          <h2>Oyun Bitti</h2>
+          <p>Bir araca çarptın.</p>
+
+          <div class="butonlar">
+            <button id="tekrarOyna" class="vurgulu" type="button">
+              Tekrar Oyna
+            </button>
+            <button id="modSec" type="button">
+              Trafik Seç
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="butonlar">
+      <button id="yenidenBaslat" class="alt-buton" type="button">
+        Yeniden Başlat
+      </button>
+      <button id="menuyeDon" class="alt-buton" type="button">
+        Trafik Seçimi
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("oyun");
+    const ctx = canvas.getContext("2d");
+
+    const menuEkrani = document.getElementById("menuEkrani");
+    const geriSayimEkrani = document.getElementById("geriSayimEkrani");
+    const geriSayimSayi = document.getElementById("geriSayimSayi");
+    const geriSayimModu = document.getElementById("geriSayimModu");
+    const oyunBittiEkrani = document.getElementById("oyunBittiEkrani");
+
+    const yenidenBaslatButonu = document.getElementById("yenidenBaslat");
+    const menuyeDonButonu = document.getElementById("menuyeDon");
+    const tekrarOynaButonu = document.getElementById("tekrarOyna");
+    const modSecButonu = document.getElementById("modSec");
+    const modKartlari = document.querySelectorAll(".mod-karti");
+
+    const yolSol = 30;
+    const yolGenislik = 360;
+    const seritSayisi = 4;
+    const seritGenisligi = yolGenislik / seritSayisi;
+
+    const modAdlari = {
+      karsi: "Tam Karşı Trafik",
+      ayni: "Aynı Yön Trafik",
+      cift: "İki Yönlü Trafik"
+    };
+
+    let seciliMod = null;
+    let oyunDurumu = "menu";
+    let oyunHizi = 4.3;
+    let yolCizgiKonumu = 0;
+    let dusmanOlusturmaSayaci = 0;
+    let dusmanlar = [];
+    let animasyonKimligi = null;
+    let geriSayimZamanlayicisi = null;
+
+    const oyuncu = {
+      serit: 2,
+      genislik: 48,
+      yukseklik: 85,
+      y: canvas.height - 115
+    };
+
+    function seritX(serit, aracGenisligi) {
+      return yolSol
+        + serit * seritGenisligi
+        + (seritGenisligi - aracGenisligi) / 2;
+    }
+
+    function yuvarlatilmisDikdortgen(x, y, genislik, yukseklik, yaricap) {
+      ctx.beginPath();
+      ctx.roundRect(x, y, genislik, yukseklik, yaricap);
+      ctx.fill();
+    }
+
+    function arabaCiz(
+      x,
+      y,
+      genislik,
+      yukseklik,
+      renk,
+      oyuncuMu,
+      yukariBakiyor
+    ) {
+      ctx.save();
+
+      if (!yukariBakiyor) {
+        ctx.translate(x + genislik / 2, y + yukseklik / 2);
+        ctx.rotate(Math.PI);
+        ctx.translate(-(x + genislik / 2), -(y + yukseklik / 2));
+      }
+
+      ctx.fillStyle = "rgba(0, 0, 0, 0.30)";
+      yuvarlatilmisDikdortgen(
+        x - 4,
+        y + 5,
+        genislik + 8,
+        yukseklik + 3,
+        10
+      );
+
+      ctx.fillStyle = "#15171a";
+      yuvarlatilmisDikdortgen(x - 5, y + 14, 7, 20, 3);
+      yuvarlatilmisDikdortgen(x + genislik - 2, y + 14, 7, 20, 3);
+      yuvarlatilmisDikdortgen(x - 5, y + yukseklik - 34, 7, 20, 3);
+      yuvarlatilmisDikdortgen(
+        x + genislik - 2,
+        y + yukseklik - 34,
+        7,
+        20,
+        3
+      );
+
+      const govdeGecisi = ctx.createLinearGradient(x, y, x + genislik, y);
+      govdeGecisi.addColorStop(0, renk);
+      govdeGecisi.addColorStop(0.5, oyuncuMu ? "#ff5a56" : renk);
+      govdeGecisi.addColorStop(1, renk);
+
+      ctx.fillStyle = govdeGecisi;
+      yuvarlatilmisDikdortgen(x, y, genislik, yukseklik, 10);
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.10)";
+      yuvarlatilmisDikdortgen(x + 6, y + 5, genislik - 12, 10, 4);
+
+      ctx.fillStyle = "rgba(0, 0, 0, 0.10)";
+      yuvarlatilmisDikdortgen(
+        x + 6,
+        y + yukseklik - 15,
+        genislik - 12,
+        10,
+        4
+      );
+
+      const camGecisi = ctx.createLinearGradient(x, y, x, y + yukseklik);
+      camGecisi.addColorStop(0, "#d7f2ff");
+      camGecisi.addColorStop(1, "#7195a8");
+
+      ctx.fillStyle = camGecisi;
+      yuvarlatilmisDikdortgen(
+        x + 8,
+        y + 17,
+        genislik - 16,
+        19,
+        5
+      );
+      yuvarlatilmisDikdortgen(
+        x + 8,
+        y + yukseklik - 37,
+        genislik - 16,
+        19,
+        5
+      );
+
+      ctx.fillStyle = "rgba(20, 24, 29, 0.55)";
+      ctx.fillRect(x + 8, y + 40, genislik - 16, 5);
+
+      ctx.fillStyle = "#fff2a8";
+      yuvarlatilmisDikdortgen(x + 6, y + 4, 10, 5, 2);
+      yuvarlatilmisDikdortgen(x + genislik - 16, y + 4, 10, 5, 2);
+
+      ctx.fillStyle = "#b51f29";
+      yuvarlatilmisDikdortgen(x + 6, y + yukseklik - 9, 10, 5, 2);
+      yuvarlatilmisDikdortgen(
+        x + genislik - 16,
+        y + yukseklik - 9,
+        10,
+        5,
+        2
+      );
+
+      if (oyuncuMu) {
+        ctx.fillStyle = "rgba(255, 255, 255, 0.62)";
+        yuvarlatilmisDikdortgen(
+          x + genislik / 2 - 2,
+          y + 5,
+          4,
+          yukseklik - 10,
+          2
+        );
+      }
+
+      ctx.restore();
+    }
+
+    function yolOkuCiz(serit, yukari, y) {
+      const ortaX = yolSol + serit * seritGenisligi + seritGenisligi / 2;
+
+      ctx.save();
+      ctx.globalAlpha = 0.16;
+      ctx.strokeStyle = "#ffffff";
+      ctx.fillStyle = "#ffffff";
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+
+      ctx.beginPath();
+
+      if (yukari) {
+        ctx.moveTo(ortaX, y + 18);
+        ctx.lineTo(ortaX, y - 14);
+        ctx.lineTo(ortaX - 8, y - 5);
+        ctx.moveTo(ortaX, y - 14);
+        ctx.lineTo(ortaX + 8, y - 5);
+      } else {
+        ctx.moveTo(ortaX, y - 18);
+        ctx.lineTo(ortaX, y + 14);
+        ctx.lineTo(ortaX - 8, y + 5);
+        ctx.moveTo(ortaX, y + 14);
+        ctx.lineTo(ortaX + 8, y + 5);
+      }
+
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function yoluCiz() {
+      ctx.fillStyle = "#31553a";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#252a2e";
+      ctx.fillRect(yolSol - 8, 0, 8, canvas.height);
+      ctx.fillRect(yolSol + yolGenislik, 0, 8, canvas.height);
+
+      const asfaltGecisi = ctx.createLinearGradient(
+        yolSol,
+        0,
+        yolSol + yolGenislik,
+        0
+      );
+      asfaltGecisi.addColorStop(0, "#454b50");
+      asfaltGecisi.addColorStop(0.5, "#3b4045");
+      asfaltGecisi.addColorStop(1, "#454b50");
+
+      ctx.fillStyle = asfaltGecisi;
+      ctx.fillRect(yolSol, 0, yolGenislik, canvas.height);
+
+      ctx.fillStyle = "#d5d8da";
+      ctx.fillRect(yolSol + 4, 0, 4, canvas.height);
+      ctx.fillRect(yolSol + yolGenislik - 8, 0, 4, canvas.height);
+
+      for (let i = 1; i < seritSayisi; i++) {
+        const x = yolSol + i * seritGenisligi;
+
+        if (seciliMod === "cift" && i === 2) {
+          ctx.fillStyle = "#d4a936";
+          ctx.fillRect(x - 4, 0, 2, canvas.height);
+          ctx.fillRect(x + 2, 0, 2, canvas.height);
+          continue;
+        }
+
+        ctx.save();
+        ctx.globalAlpha = 0.72;
+        ctx.fillStyle = "#e1e3e4";
+
+        for (
+          let y = -55 + yolCizgiKonumu;
+          y < canvas.height;
+          y += 112
+        ) {
+          yuvarlatilmisDikdortgen(x - 2, y, 4, 44, 2);
+        }
+
+        ctx.restore();
+      }
+
+      if (seciliMod === "karsi") {
+        for (let serit = 0; serit < 4; serit++) {
+          yolOkuCiz(serit, false, 145);
+          yolOkuCiz(serit, false, 470);
+        }
+      }
+
+      if (seciliMod === "ayni") {
+        for (let serit = 0; serit < 4; serit++) {
+          yolOkuCiz(serit, true, 145);
+          yolOkuCiz(serit, true, 470);
+        }
+      }
+
+      if (seciliMod === "cift") {
+        yolOkuCiz(0, false, 145);
+        yolOkuCiz(1, false, 470);
+        yolOkuCiz(2, true, 145);
+        yolOkuCiz(3, true, 470);
+      }
+
+      yolCizgiKonumu += oyunHizi * 0.52;
+
+      if (yolCizgiKonumu >= 112) {
+        yolCizgiKonumu = 0;
+      }
+    }
+
+    function oyuncuyuCiz() {
+      const x = seritX(oyuncu.serit, oyuncu.genislik);
+
+      arabaCiz(
+        x,
+        oyuncu.y,
+        oyuncu.genislik,
+        oyuncu.yukseklik,
+        "#d9363e",
+        true,
+        true
+      );
+    }
+
+    function seritYonu(serit) {
+      if (seciliMod === "karsi") {
+        return "karsi";
+      }
+
+      if (seciliMod === "ayni") {
+        return "ayni";
+      }
+
+      return serit < 2 ? "karsi" : "ayni";
+    }
+
+    function dusmanHizi(yön) {
+      if (yön === "karsi") {
+        return oyunHizi * 1.02;
+      }
+
+      return Math.max(1.45, oyunHizi * 0.48);
+    }
+
+    function dusmanOlustur() {
+      const yeniAracY = -100;
+      const minimumDikeyBosluk = 195;
+      const uygunSeritler = [];
+
+      for (let serit = 0; serit < seritSayisi; serit++) {
+        const yön = seritYonu(serit);
+        const hiz = dusmanHizi(yön);
+        const adayVarisSuresi = (oyuncu.y - yeniAracY) / hiz;
+
+        const ayniSeritteYakinAracVar = dusmanlar.some(function(dusman) {
+          return (
+            dusman.serit === serit &&
+            Math.abs(dusman.y - yeniAracY) < minimumDikeyBosluk
+          );
+        });
+
+        if (ayniSeritteYakinAracVar) {
+          continue;
+        }
+
+        const ayniZamandaVaracakSeritler = new Set();
+
+        dusmanlar.forEach(function(dusman) {
+          const kalanMesafe = oyuncu.y - dusman.y;
+
+          if (kalanMesafe <= 0) {
+            return;
+          }
+
+          const varisSuresi = kalanMesafe / dusman.hiz;
+
+          if (Math.abs(varisSuresi - adayVarisSuresi) < 50) {
+            ayniZamandaVaracakSeritler.add(dusman.serit);
+          }
+        });
+
+        ayniZamandaVaracakSeritler.add(serit);
+
+        if (ayniZamandaVaracakSeritler.size < seritSayisi) {
+          uygunSeritler.push(serit);
+        }
+      }
+
+      if (uygunSeritler.length === 0) {
+        return false;
+      }
+
+      const rastgeleSerit =
+        uygunSeritler[
+          Math.floor(Math.random() * uygunSeritler.length)
+        ];
+
+      const yön = seritYonu(rastgeleSerit);
+
+      dusmanlar.push({
+        serit: rastgeleSerit,
+        genislik: 46,
+        yukseklik: 82,
+        y: yeniAracY,
+        yön: yön,
+        hiz: dusmanHizi(yön),
+        renk: ["#326fa8", "#d2a62f", "#754b91", "#3e8b69"][
+          Math.floor(Math.random() * 4)
+        ]
+      });
+
+      return true;
+    }
+
+    function dusmanlariGuncelle() {
+      dusmanOlusturmaSayaci++;
+
+      let olusturmaAraligi = Math.max(50, 96 - oyunHizi * 4);
+
+      if (seciliMod === "ayni") {
+        olusturmaAraligi += 10;
+      }
+
+      if (dusmanOlusturmaSayaci >= olusturmaAraligi) {
+        const aracOlusturuldu = dusmanOlustur();
+
+        if (aracOlusturuldu) {
+          dusmanOlusturmaSayaci = 0;
+        } else {
+          dusmanOlusturmaSayaci = olusturmaAraligi - 12;
+        }
+      }
+
+      for (let i = dusmanlar.length - 1; i >= 0; i--) {
+        const dusman = dusmanlar[i];
+
+        dusman.hiz = dusmanHizi(dusman.yön);
+        dusman.y += dusman.hiz;
+
+        const x = seritX(dusman.serit, dusman.genislik);
+
+        arabaCiz(
+          x,
+          dusman.y,
+          dusman.genislik,
+          dusman.yukseklik,
+          dusman.renk,
+          false,
+          dusman.yön === "ayni"
+        );
+
+        if (carpismaVarMi(dusman)) {
+          oyunuBitir();
+          return;
+        }
+
+        if (dusman.y > canvas.height + 110) {
+          dusmanlar.splice(i, 1);
+        }
+      }
+    }
+
+    function carpismaVarMi(dusman) {
+      const oyuncuX = seritX(
+        oyuncu.serit,
+        oyuncu.genislik
+      );
+
+      const dusmanX = seritX(
+        dusman.serit,
+        dusman.genislik
+      );
+
+      const yatayPay = 7;
+      const dikeyPay = 8;
+
+      return (
+        oyuncuX + yatayPay < dusmanX + dusman.genislik - yatayPay &&
+        oyuncuX + oyuncu.genislik - yatayPay > dusmanX + yatayPay &&
+        oyuncu.y + dikeyPay < dusman.y + dusman.yukseklik - dikeyPay &&
+        oyuncu.y + oyuncu.yukseklik - dikeyPay > dusman.y + dikeyPay
+      );
+    }
+
+    function bilgileriCiz() {
+      ctx.fillStyle = "rgba(14, 17, 20, 0.74)";
+      yuvarlatilmisDikdortgen(12, 12, 160, 55, 9);
+
+      ctx.fillStyle = "#f2f4f5";
+      ctx.font = "bold 16px Arial";
+      ctx.fillText("Hız: " + oyunHizi.toFixed(1), 24, 34);
+
+      ctx.fillStyle = "#cbd2d8";
+      ctx.font = "13px Arial";
+      ctx.fillText(modAdlari[seciliMod] || "", 24, 54);
+    }
+
+    function oyunDongusu() {
+      if (oyunDurumu !== "oynuyor") {
+        return;
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      yoluCiz();
+      oyuncuyuCiz();
+      dusmanlariGuncelle();
+      bilgileriCiz();
+
+      if (oyunDurumu === "oynuyor") {
+        animasyonKimligi = requestAnimationFrame(oyunDongusu);
+      }
+    }
+
+    function oyunuSifirla() {
+      if (animasyonKimligi !== null) {
+        cancelAnimationFrame(animasyonKimligi);
+        animasyonKimligi = null;
+      }
+
+      oyunHizi = 4.3;
+      yolCizgiKonumu = 0;
+      dusmanOlusturmaSayaci = 0;
+      dusmanlar = [];
+      oyuncu.serit = seciliMod === "cift" ? 2 : 1;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      yoluCiz();
+      oyuncuyuCiz();
+      bilgileriCiz();
+    }
+
+    function geriSayimiBaslat() {
+      if (!seciliMod) {
+        menuGoster();
+        return;
+      }
+
+      clearInterval(geriSayimZamanlayicisi);
+      oyunuSifirla();
+
+      oyunDurumu = "gerisayim";
+      menuEkrani.classList.add("gizli");
+      oyunBittiEkrani.classList.add("gizli");
+      geriSayimEkrani.classList.remove("gizli");
+      geriSayimModu.textContent = modAdlari[seciliMod];
+
+      let sayi = 3;
+      geriSayimSayi.textContent = sayi;
+      geriSayimSayi.style.animation = "none";
+      void geriSayimSayi.offsetWidth;
+      geriSayimSayi.style.animation = "nabiz 0.7s ease";
+
+      geriSayimZamanlayicisi = setInterval(function() {
+        sayi--;
+
+        if (sayi > 0) {
+          geriSayimSayi.textContent = sayi;
+          geriSayimSayi.style.animation = "none";
+          void geriSayimSayi.offsetWidth;
+          geriSayimSayi.style.animation = "nabiz 0.7s ease";
+          return;
+        }
+
+        if (sayi === 0) {
+          geriSayimSayi.textContent = "BAŞLA!";
+          geriSayimSayi.style.fontSize = "54px";
+          geriSayimSayi.style.animation = "none";
+          void geriSayimSayi.offsetWidth;
+          geriSayimSayi.style.animation = "nabiz 0.7s ease";
+          return;
+        }
+
+        clearInterval(geriSayimZamanlayicisi);
+        geriSayimSayi.style.fontSize = "";
+        geriSayimEkrani.classList.add("gizli");
+        oyunDurumu = "oynuyor";
+        oyunDongusu();
+      }, 720);
+    }
+
+    function oyunuBitir() {
+      oyunDurumu = "bitti";
+
+      if (animasyonKimligi !== null) {
+        cancelAnimationFrame(animasyonKimligi);
+        animasyonKimligi = null;
+      }
+
+      oyunBittiEkrani.classList.remove("gizli");
+    }
+
+    function menuGoster() {
+      oyunDurumu = "menu";
+
+      clearInterval(geriSayimZamanlayicisi);
+
+      if (animasyonKimligi !== null) {
+        cancelAnimationFrame(animasyonKimligi);
+        animasyonKimligi = null;
+      }
+
+      geriSayimEkrani.classList.add("gizli");
+      oyunBittiEkrani.classList.add("gizli");
+      menuEkrani.classList.remove("gizli");
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      seciliMod = null;
+      yoluCiz();
+    }
+
+    modKartlari.forEach(function(kart) {
+      kart.addEventListener("click", function() {
+        seciliMod = kart.dataset.mod;
+        geriSayimiBaslat();
+      });
+    });
+
+    document.addEventListener("keydown", function(event) {
+      if (oyunDurumu !== "oynuyor") {
+        return;
+      }
+
+      if (event.key === "ArrowLeft") {
+        oyuncu.serit = Math.max(0, oyuncu.serit - 1);
+      }
+
+      if (event.key === "ArrowRight") {
+        oyuncu.serit = Math.min(seritSayisi - 1, oyuncu.serit + 1);
+      }
+
+      if (event.key === "ArrowUp") {
+        oyunHizi = Math.min(10, oyunHizi + 0.7);
+      }
+
+      if (event.key === "ArrowDown") {
+        oyunHizi = Math.max(2, oyunHizi - 0.7);
+      }
+
+      if (
+        event.key === "ArrowLeft" ||
+        event.key === "ArrowRight" ||
+        event.key === "ArrowUp" ||
+        event.key === "ArrowDown"
+      ) {
+        event.preventDefault();
+      }
+    });
+
+    yenidenBaslatButonu.addEventListener("click", function() {
+      if (seciliMod) {
+        geriSayimiBaslat();
+      } else {
+        menuGoster();
+      }
+    });
+
+    menuyeDonButonu.addEventListener("click", menuGoster);
+    tekrarOynaButonu.addEventListener("click", geriSayimiBaslat);
+    modSecButonu.addEventListener("click", menuGoster);
+
+    ctx.fillStyle = "#31553a";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#3f454a";
+    ctx.fillRect(yolSol, 0, yolGenislik, canvas.height);
+  </script>
+</body>
+</html>
